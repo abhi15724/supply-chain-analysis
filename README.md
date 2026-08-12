@@ -10,16 +10,16 @@ Chennai, Kolkata), with pricing, sales, quality/inspection, and logistics data.
 ## Dashboard preview
 
 **Overview** — KPI cards, revenue/margin by category, profit concentration, revenue by hub, supplier risk snapshot
-![Overview](screenshots/01_overview.png)
+![Overview](01_overview.png)
 
 **Suppliers** — clickable filter chips, defect-rate vs lead-time scatter, QC inspection mix, sortable scorecard
-![Suppliers](screenshots/02_suppliers.png)
+![Suppliers](02_suppliers.png)
 
 **Stockout Risk** — searchable, sortable table of SKUs with thinner stock cover than supplier lead time
-![Stockout Risk](screenshots/03_stockout_risk.png)
+![Stockout Risk](03_stockout_risk.png)
 
 **Mobile** — fully responsive, single-column layout with slide-out nav
-<img src="screenshots/04_mobile.png" alt="Mobile view" width="320">
+<img src="04_mobile.png" alt="Mobile view" width="320">
 
 ---
 
