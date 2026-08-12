@@ -1,0 +1,4 @@
+segment,sku_count,total_revenue,avg_margin,avg_defect_rate
+At-risk (low stock cover + QC concern),66,379784.48,86.2,2.47
+High-value (top 25% profit),8,72432.72,93.12,1.5
+Standard,26,125387.62,83.55,2.02

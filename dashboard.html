@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply Chain Control Tower</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0A0F1A;
+  --panel:#111927;
+  --panel-2:#161F30;
+  --border:#223049;
+  --text:#E9EDF5;
+  --muted:#8B98AC;
+  --amber:#F2A93B;
+  --teal:#35C9C1;
+  --red:#FF6259;
+  --blue:#5B8DEF;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  display:flex;
+  overflow-x:hidden;
+}
+::-webkit-scrollbar{width:8px; height:8px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  width:220px;
+  min-width:220px;
+  background:var(--panel);
+  border-right:1px solid var(--border);
+  padding:24px 16px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  transition:transform .25s ease;
+  z-index:100;
+}
+.brand{
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:700;
+  font-size:16px;
+  letter-spacing:.02em;
+  padding:4px 10px 22px 10px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.brand .dot{width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 10px var(--amber);}
+.navlabel{
+  font-size:10.5px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  color:var(--muted);
+  padding:14px 10px 6px 10px;
+}
+.navitem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:13.5px;
+  font-weight:500;
+  color:var(--muted);
+  border:1px solid transparent;
+  transition:.15s;
+  user-select:none;
+}
+.navitem:hover{color:var(--text); background:var(--panel-2);}
+.navitem.active{
+  color:var(--text);
+  background:var(--panel-2);
+  border-color:var(--border);
+}
+.navitem.active .navicon{color:var(--amber);}
+.navicon{width:16px; text-align:center; font-size:14px; color:var(--muted);}
+.sidebar-foot{
+  margin-top:auto;
+  font-size:10.5px;
+  color:var(--muted);
+  padding:12px 10px 0 10px;
+  border-top:1px solid var(--border);
+  line-height:1.6;
+}
+
+.menu-toggle{
+  display:none;
+  position:fixed;
+  top:16px; left:16px;
+  z-index:200;
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  color:var(--text);
+  width:38px; height:38px;
+  border-radius:8px;
+  font-size:16px;
+  cursor:pointer;
+}
+
+/* ---------- Main ---------- */
+.main{flex:1; min-width:0; padding:28px 32px 60px 32px;}
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:26px;
+  flex-wrap:wrap;
+  gap:14px;
+}
+.topbar h1{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:24px;
+  font-weight:600;
+  margin-bottom:4px;
+}
+.topbar p{color:var(--muted); font-size:13px;}
+.badge{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  color:var(--teal);
+  padding:6px 12px;
+  border-radius:20px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.badge .pulse{width:6px; height:6px; border-radius:50%; background:var(--teal); animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;} 50%{opacity:.3;}}
+
+/* ---------- Flow strip (signature element) ---------- */
+.flow{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:0;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px 10px;
+  margin-bottom:26px;
+  position:relative;
+}
+.flow-node{
+  text-align:center;
+  padding:0 8px;
+  position:relative;
+}
+.flow-node:not(:last-child)::after{
+  content:'';
+  position:absolute;
+  top:17px; right:-4px;
+  width:calc(100% - 12px);
+  border-top:1.5px dashed var(--border);
+}
+.flow-icon{
+  width:34px; height:34px;
+  border-radius:50%;
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 10px auto;
+  font-size:15px;
+  position:relative; z-index:2;
+}
+.flow-node .flabel{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;}
+.flow-node .fval{font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:600;}
+
+/* ---------- KPI cards ---------- */
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:26px;
+}
+.kpi{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px 20px;
+}
+.kpi .klabel{font-size:11.5px; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.06em;}
+.kpi .kval{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700;}
+.kpi .ksub{font-size:11px; color:var(--muted); margin-top:6px;}
+.kpi.warn .kval{color:var(--amber);}
+.kpi.good .kval{color:var(--teal);}
+
+/* ---------- Panels / sections ---------- */
+.section{display:none;}
+.section.active{display:block; animation:fade .3s ease;}
+@keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+.grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px;}
+.grid1{display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+}
+.panel h3{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:14.5px;
+  font-weight:600;
+  margin-bottom:2px;
+}
+.panel .phint{font-size:11.5px; color:var(--muted); margin-bottom:14px;}
+.chartwrap{position:relative; height:260px;}
+.chartwrap.tall{height:320px;}
+
+/* ---------- Table ---------- */
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+th{
+  text-align:left;
+  color:var(--muted);
+  font-weight:500;
+  text-transform:uppercase;
+  font-size:10.5px;
+  letter-spacing:.05em;
+  padding:8px 10px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  user-select:none;
+}
+th:hover{color:var(--text);}
+td{padding:9px 10px; border-bottom:1px solid #1a2436;}
+td.mono{font-family:'JetBrains Mono',monospace;}
+tr:hover td{background:var(--panel-2);}
+.pill{
+  display:inline-block;
+  padding:2px 9px;
+  border-radius:20px;
+  font-size:10.5px;
+  font-weight:600;
+}
+.pill.risk-hi{background:rgba(255,98,89,.15); color:var(--red);}
+.pill.risk-mid{background:rgba(242,169,59,.15); color:var(--amber);}
+.pill.risk-lo{background:rgba(53,201,193,.15); color:var(--teal);}
+
+.filter-row{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+.fchip{
+  font-size:11.5px;
+  padding:6px 13px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  background:var(--panel-2);
+  color:var(--muted);
+  cursor:pointer;
+  transition:.15s;
+  user-select:none;
+}
+.fchip:hover{color:var(--text);}
+.fchip.active{background:var(--amber); color:#1a1305; border-color:var(--amber); font-weight:600;}
+
+.insight-list{display:flex; flex-direction:column; gap:12px;}
+.insight{
+  display:flex; gap:12px;
+  padding:14px;
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  border-left:3px solid var(--amber);
+}
+.insight .inum{font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--amber); font-size:15px; min-width:22px;}
+.insight .ititle{font-weight:600; font-size:13px; margin-bottom:4px;}
+.insight .itext{font-size:12.5px; color:var(--muted); line-height:1.5;}
+
+footer{margin-top:20px; font-size:11px; color:var(--muted); text-align:center;}
+
+@media (max-width: 980px){
+  .grid2{grid-template-columns:1fr;}
+  .kpis{grid-template-columns:repeat(2,1fr);}
+  .flow{grid-template-columns:repeat(2,1fr); row-gap:20px;}
+  .flow-node:nth-child(2)::after{display:none;}
+}
+@media (max-width: 720px){
+  .menu-toggle{display:block;}
+  .sidebar{position:fixed; left:0; transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0); box-shadow:0 0 40px rgba(0,0,0,.5);}
+  .main{padding:70px 16px 40px 16px;}
+  .kpis{grid-template-columns:1fr 1fr;}
+  .flow{grid-template-columns:1fr 1fr;}
+  table{font-size:11px;}
+  th,td{padding:7px 6px;}
+}
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle">&#9776;</button>
+
+<nav class="sidebar" id="sidebar">
+  <div class="brand"><span class="dot"></span>SUPPLYLENS</div>
+  <div class="navlabel">Dashboard</div>
+  <div class="navitem active" data-section="overview"><span class="navicon">&#9679;</span>Overview</div>
+  <div class="navitem" data-section="products"><span class="navicon">&#9670;</span>Products</div>
+  <div class="navitem" data-section="suppliers"><span class="navicon">&#9632;</span>Suppliers</div>
+  <div class="navitem" data-section="logistics"><span class="navicon">&#9651;</span>Logistics</div>
+  <div class="navitem" data-section="risk"><span class="navicon">&#9888;</span>Stockout Risk</div>
+  <div class="navitem" data-section="insights"><span class="navicon">&#9733;</span>Insights</div>
+  <div class="sidebar-foot">Beauty & Personal Care<br>Supply Chain · 100 SKUs<br>5 suppliers · 5 Indian hubs</div>
+</nav>
+
+<main class="main">
+
+  <div class="topbar">
+    <div>
+      <h1>Supply Chain Control Tower</h1>
+      <p>Beauty & personal care distribution — performance, cost & risk overview</p>
+    </div>
+    <div class="badge"><span class="pulse"></span>Live analysis · 100 SKUs tracked</div>
+  </div>
+
+  <div class="flow" id="flowStrip">
+    <div class="flow-node">
+      <div class="flow-icon">&#9670;</div>
+      <div class="flabel">Suppliers</div>
+      <div class="fval">5 active</div>
+    </div>
+    <div class="flow-node">
+      <div class="flow-icon">&#9881;</div>
+      <div class="flabel">Manufacturing</div>
+      <div class="fval" id="flowMfg">—</div>
+    </div>
+    <div class="flow-node">
+      <div class="flow-icon">&#9992;</div>
+      <div class="flabel">Shipping</div>
+      <div class="fval" id="flowShip">—</div>
+    </div>
+    <div class="flow-node">
+      <div class="flow-icon">&#9733;</div>
+      <div class="flabel">Revenue</div>
+      <div class="fval" id="flowRev">—</div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="klabel">Total Revenue</div><div class="kval" id="kpiRevenue">—</div><div class="ksub">across 100 SKUs</div></div>
+    <div class="kpi good"><div class="klabel">Total Profit</div><div class="kval" id="kpiProfit">—</div><div class="ksub" id="kpiMargin">— avg margin</div></div>
+    <div class="kpi"><div class="klabel">Avg Defect Rate</div><div class="kval" id="kpiDefect">—</div><div class="ksub">across all suppliers</div></div>
+    <div class="kpi warn"><div class="klabel">SKUs At Risk</div><div class="kval" id="kpiRisk">—</div><div class="ksub">thin stock cover or failed QC</div></div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section class="section active" id="sec-overview">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Revenue & Margin by Category</h3>
+        <div class="phint">Skincare leads on volume, cosmetics leads on margin</div>
+        <div class="chartwrap"><canvas id="chartCategory"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Profit Concentration</h3>
+        <div class="phint">Top 30 SKUs ranked by profit, cumulative %</div>
+        <div class="chartwrap"><canvas id="chartPareto"></canvas></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Revenue by Distribution Hub</h3>
+        <div class="phint">Click a bar to see it highlighted</div>
+        <div class="chartwrap"><canvas id="chartLocation"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Supplier Risk Snapshot</h3>
+        <div class="phint">Composite of defect rate + lead time</div>
+        <div class="chartwrap"><canvas id="chartSupplierMini"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section class="section" id="sec-products">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Revenue vs Profit by Category</h3>
+        <div class="phint">Every product line is profitable — margin gap is the story</div>
+        <div class="chartwrap tall"><canvas id="chartProdRevProfit"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Top 15 SKUs by Profit</h3>
+        <div class="phint">Click a row to filter</div>
+        <div style="max-height:320px; overflow-y:auto;">
+        <table id="tblTopProfit">
+          <thead><tr><th>SKU</th><th>Category</th><th>Supplier</th><th>Profit</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUPPLIERS -->
+  <section class="section" id="sec-suppliers">
+    <div class="filter-row" id="supplierFilters"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Defect Rate vs Lead Time</h3>
+        <div class="phint">Bubble size = revenue contribution</div>
+        <div class="chartwrap tall"><canvas id="chartSupplierScatter"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>QC Inspection Outcome Mix</h3>
+        <div class="phint">Share of each supplier's SKUs by result</div>
+        <div class="chartwrap tall"><canvas id="chartInspection"></canvas></div>
+      </div>
+    </div>
+    <div class="grid1">
+      <div class="panel">
+        <h3>Supplier Scorecard</h3>
+        <div class="phint">Sortable — click any column header</div>
+        <table id="tblSuppliers">
+          <thead><tr>
+            <th data-key="Supplier name">Supplier</th>
+            <th data-key="skus">SKUs</th>
+            <th data-key="revenue">Revenue</th>
+            <th data-key="defect">Avg Defect %</th>
+            <th data-key="lead">Avg Lead (days)</th>
+            <th data-key="fail_rate">QC Fail %</th>
+            <th data-key="risk">Risk</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGISTICS -->
+  <section class="section" id="sec-logistics">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Shipping Cost vs Time by Carrier</h3>
+        <div class="phint">Bubble size = shipment count · lower-left is best value</div>
+        <div class="chartwrap tall"><canvas id="chartShipping"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Route Efficiency</h3>
+        <div class="phint">Avg cost and transit time by route</div>
+        <div class="chartwrap tall"><canvas id="chartRoutes"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RISK -->
+  <section class="section" id="sec-risk">
+    <div class="panel" style="margin-bottom:16px;">
+      <h3>Stockout Risk — Stock Cover Below Supplier Lead Time</h3>
+      <div class="phint">Top 30 riskiest SKUs, ranked by days of stock cover remaining. Search or sort to explore.</div>
+      <input type="text" id="riskSearch" placeholder="Search SKU, category, or supplier…" style="width:100%; max-width:320px; padding:9px 12px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12.5px; margin-bottom:14px;">
+      <table id="tblRisk">
+        <thead><tr>
+          <th data-key="SKU">SKU</th>
+          <th data-key="Product type">Category</th>
+          <th data-key="Supplier name">Supplier</th>
+          <th data-key="Stock levels">Stock</th>
+          <th data-key="Days of stock cover">Days Cover</th>
+          <th data-key="Lead time">Lead Time</th>
+          <th>Status</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- INSIGHTS -->
+  <section class="section" id="sec-insights">
+    <div class="panel">
+      <h3>Business Insights & Recommendations</h3>
+      <div class="phint">Priority order — highest urgency first</div>
+      <div class="insight-list" id="insightList"></div>
+    </div>
+  </section>
+
+  <footer>SupplyLens · Generated from supply_chain_data.csv · Full source project includes Python, SQL, and Excel deliverables</footer>
+
+</main>
+
+<script id="dashboard-data" type="application/json">
+{"kpis": {"total_revenue": 577605.0, "total_profit": 519399.0, "avg_margin": 86.1, "at_risk_skus": 92, "total_skus": 100, "avg_defect_rate": 2.28}, "category": [{"Product type": "cosmetics", "revenue": 161521.27, "profit": 146877.93, "margin": 87.26, "skus": 26}, {"Product type": "haircare", "revenue": 174455.39, "profit": 155278.09, "margin": 85.25, "skus": 34}, {"Product type": "skincare", "revenue": 241628.16, "profit": 217242.73, "margin": 85.98, "skus": 40}], "supplier": [{"Supplier name": "Supplier 1", "revenue": 157529.0, "defect": 1.8, "lead": 14.78, "skus": 27, "fail_rate": 22.2}, {"Supplier name": "Supplier 2", "revenue": 125467.42, "defect": 2.36, "lead": 18.55, "skus": 22, "fail_rate": 36.4}, {"Supplier name": "Supplier 3", "revenue": 97795.98, "defect": 2.47, "lead": 20.13, "skus": 15, "fail_rate": 20.0}, {"Supplier name": "Supplier 4", "revenue": 86468.96, "defect": 2.34, "lead": 15.22, "skus": 18, "fail_rate": 66.7}, {"Supplier name": "Supplier 5", "revenue": 110343.46, "defect": 2.67, "lead": 18.06, "skus": 18, "fail_rate": 38.9}], "shipping": [{"Shipping carriers": "Carrier A", "Transportation modes": "Air", "cost": 6.25, "time": 5.6, "n": 5}, {"Shipping carriers": "Carrier A", "Transportation modes": "Rail", "cost": 6.4, "time": 7.43, "n": 7}, {"Shipping carriers": "Carrier A", "Transportation modes": "Road", "cost": 5.47, "time": 5.18, "n": 11}, {"Shipping carriers": "Carrier A", "Transportation modes": "Sea", "cost": 3.88, "time": 7.0, "n": 5}, {"Shipping carriers": "Carrier B", "Transportation modes": "Air", "cost": 6.22, "time": 4.21, "n": 14}, {"Shipping carriers": "Carrier B", "Transportation modes": "Rail", "cost": 5.23, "time": 6.33, "n": 15}, {"Shipping carriers": "Carrier B", "Transportation modes": "Road", "cost": 4.98, "time": 4.91, "n": 11}, {"Shipping carriers": "Carrier B", "Transportation modes": "Sea", "cost": 5.55, "time": 6.67, "n": 3}, {"Shipping carriers": "Carrier C", "Transportation modes": "Air", "cost": 5.46, "time": 6.57, "n": 7}, {"Shipping carriers": "Carrier C", "Transportation modes": "Rail", "cost": 4.98, "time": 6.17, "n": 6}, {"Shipping carriers": "Carrier C", "Transportation modes": "Road", "cost": 6.55, "time": 3.71, "n": 7}, {"Shipping carriers": "Carrier C", "Transportation modes": "Sea", "cost": 5.38, "time": 7.33, "n": 9}], "location": [{"Location": "Bangalore", "revenue": 102601.72, "defect": 2.09, "skus": 18}, {"Location": "Chennai", "revenue": 119142.82, "defect": 2.64, "skus": 20}, {"Location": "Delhi", "revenue": 81027.7, "defect": 2.23, "skus": 15}, {"Location": "Kolkata", "revenue": 137077.55, "defect": 2.29, "skus": 25}, {"Location": "Mumbai", "revenue": 137755.03, "defect": 2.12, "skus": 22}], "top_profit": [{"SKU": "SKU2", "Product type": "haircare", "Profit": 9397.09, "Revenue generated": 9577.75, "Supplier name": "Supplier 1"}, {"SKU": "SKU38", "Product type": "cosmetics", "Profit": 9337.48, "Revenue generated": 9692.32, "Supplier name": "Supplier 5"}, {"SKU": "SKU67", "Product type": "skincare", "Profit": 9288.32, "Revenue generated": 9473.8, "Supplier name": "Supplier 1"}, {"SKU": "SKU88", "Product type": "cosmetics", "Profit": 9268.84, "Revenue generated": 9444.74, "Supplier name": "Supplier 2"}, {"SKU": "SKU51", "Product type": "haircare", "Profit": 9152.51, "Revenue generated": 9866.47, "Supplier name": "Supplier 5"}, {"SKU": "SKU31", "Product type": "skincare", "Profit": 8982.83, "Revenue generated": 9655.14, "Supplier name": "Supplier 3"}, {"SKU": "SKU99", "Product type": "haircare", "Profit": 8935.06, "Revenue generated": 9185.19, "Supplier name": "Supplier 2"}, {"SKU": "SKU52", "Product type": "skincare", "Profit": 8815.07, "Revenue generated": 9435.76, "Supplier name": "Supplier 1"}, {"SKU": "SKU32", "Product type": "skincare", "Profit": 8774.09, "Revenue generated": 9571.55, "Supplier name": "Supplier 3"}, {"SKU": "SKU18", "Product type": "haircare", "Profit": 8739.75, "Revenue generated": 9364.67, "Supplier name": "Supplier 2"}, {"SKU": "SKU23", "Product type": "cosmetics", "Profit": 8560.5, "Revenue generated": 8858.37, "Supplier name": "Supplier 5"}, {"SKU": "SKU34", "Product type": "skincare", "Profit": 8539.58, "Revenue generated": 9061.71, "Supplier name": "Supplier 1"}, {"SKU": "SKU90", "Product type": "skincare", "Profit": 8509.2, "Revenue generated": 9592.63, "Supplier name": "Supplier 3"}, {"SKU": "SKU0", "Product type": "haircare", "Profit": 8425.01, "Revenue generated": 8662.0, "Supplier name": "Supplier 3"}, {"SKU": "SKU60", "Product type": "skincare", "Profit": 8342.32, "Revenue generated": 8864.08, "Supplier name": "Supplier 4"}], "risk": [{"SKU": "SKU68", "Product type": "haircare", "Supplier name": "Supplier 2", "Stock levels": 0, "Days of stock cover": 0.0, "Lead time": 2}, {"SKU": "SKU34", "Product type": "skincare", "Supplier name": "Supplier 1", "Stock levels": 1, "Days of stock cover": 0.05, "Lead time": 4}, {"SKU": "SKU47", "Product type": "skincare", "Supplier name": "Supplier 1", "Stock levels": 4, "Days of stock cover": 0.13, "Lead time": 10}, {"SKU": "SKU78", "Product type": "haircare", "Supplier name": "Supplier 5", "Stock levels": 5, "Days of stock cover": 0.16, "Lead time": 25}, {"SKU": "SKU4", "Product type": "skincare", "Supplier name": "Supplier 1", "Stock levels": 5, "Days of stock cover": 0.17, "Lead time": 5}, {"SKU": "SKU33", "Product type": "cosmetics", "Supplier name": "Supplier 5", "Stock levels": 4, "Days of stock cover": 0.19, "Lead time": 1}, {"SKU": "SKU16", "Product type": "skincare", "Supplier name": "Supplier 1", "Stock levels": 2, "Days of stock cover": 0.21, "Lead time": 3}, {"SKU": "SKU58", "Product type": "skincare", "Supplier name": "Supplier 3", "Stock levels": 10, "Days of stock cover": 0.33, "Lead time": 18}, {"SKU": "SKU44", "Product type": "cosmetics", "Supplier name": "Supplier 2", "Stock levels": 13, "Days of stock cover": 0.42, "Lead time": 7}, {"SKU": "SKU9", "Product type": "skincare", "Supplier name": "Supplier 2", "Stock levels": 14, "Days of stock cover": 0.43, "Lead time": 29}, {"SKU": "SKU18", "Product type": "haircare", "Supplier name": "Supplier 2", "Stock levels": 10, "Days of stock cover": 0.48, "Lead time": 18}, {"SKU": "SKU66", "Product type": "skincare", "Supplier name": "Supplier 5", "Stock levels": 13, "Days of stock cover": 0.55, "Lead time": 24}, {"SKU": "SKU36", "Product type": "skincare", "Supplier name": "Supplier 2", "Stock levels": 18, "Days of stock cover": 0.56, "Lead time": 26}, {"SKU": "SKU24", "Product type": "haircare", "Supplier name": "Supplier 2", "Stock levels": 4, "Days of stock cover": 0.57, "Lead time": 28}, {"SKU": "SKU15", "Product type": "skincare", "Supplier name": "Supplier 1", "Stock levels": 9, "Days of stock cover": 0.58, "Lead time": 14}, {"SKU": "SKU57", "Product type": "haircare", "Supplier name": "Supplier 2", "Stock levels": 5, "Days of stock cover": 0.66, "Lead time": 21}, {"SKU": "SKU95", "Product type": "haircare", "Supplier name": "Supplier 4", "Stock levels": 15, "Days of stock cover": 0.67, "Lead time": 18}, {"SKU": "SKU67", "Product type": "skincare", "Supplier name": "Supplier 1", "Stock levels": 12, "Days of stock cover": 0.7, "Lead time": 10}, {"SKU": "SKU37", "Product type": "skincare", "Supplier name": "Supplier 3", "Stock levels": 25, "Days of stock cover": 0.78, "Lead time": 24}, {"SKU": "SKU8", "Product type": "cosmetics", "Supplier name": "Supplier 4", "Stock levels": 5, "Days of stock cover": 1.0, "Lead time": 13}, {"SKU": "SKU31", "Product type": "skincare", "Supplier name": "Supplier 3", "Stock levels": 6, "Days of stock cover": 1.07, "Lead time": 24}, {"SKU": "SKU80", "Product type": "skincare", "Supplier name": "Supplier 3", "Stock levels": 39, "Days of stock cover": 1.34, "Lead time": 8}, {"SKU": "SKU73", "Product type": "cosmetics", "Supplier name": "Supplier 4", "Stock levels": 17, "Days of stock cover": 1.36, "Lead time": 13}, {"SKU": "SKU11", "Product type": "skincare", "Supplier name": "Supplier 2", "Stock levels": 46, "Days of stock cover": 1.44, "Lead time": 28}, {"SKU": "SKU50", "Product type": "cosmetics", "Supplier name": "Supplier 2", "Stock levels": 31, "Days of stock cover": 1.47, "Lead time": 20}, {"SKU": "SKU10", "Product type": "skincare", "Supplier name": "Supplier 5", "Stock levels": 51, "Days of stock cover": 1.54, "Lead time": 18}, {"SKU": "SKU54", "Product type": "haircare", "Supplier name": "Supplier 1", "Stock levels": 33, "Days of stock cover": 1.59, "Lead time": 26}, {"SKU": "SKU98", "Product type": "skincare", "Supplier name": "Supplier 5", "Stock levels": 53, "Days of stock cover": 1.74, "Lead time": 28}, {"SKU": "SKU81", "Product type": "haircare", "Supplier name": "Supplier 3", "Stock levels": 48, "Days of stock cover": 1.86, "Lead time": 28}, {"SKU": "SKU87", "Product type": "haircare", "Supplier name": "Supplier 3", "Stock levels": 5, "Days of stock cover": 1.9, "Lead time": 27}], "inspection": [{"Supplier name": "Supplier 1", "Fail": 22.2, "Pass": 48.1, "Pending": 29.6}, {"Supplier name": "Supplier 2", "Fail": 36.4, "Pass": 22.7, "Pending": 40.9}, {"Supplier name": "Supplier 3", "Fail": 20.0, "Pass": 13.3, "Pending": 66.7}, {"Supplier name": "Supplier 4", "Fail": 66.7, "Pass": 0.0, "Pending": 33.3}, {"Supplier name": "Supplier 5", "Fail": 38.9, "Pass": 16.7, "Pending": 44.4}], "routes": [{"Routes": "Route A", "cost": 5.38, "time": 6.02, "n": 43}, {"Routes": "Route B", "cost": 5.55, "time": 5.7, "n": 37}, {"Routes": "Route C", "cost": 5.9, "time": 5.25, "n": 20}], "pareto": [{"sku": "SKU2", "profit": 9397.09, "cum_pct": 1.8}, {"sku": "SKU38", "profit": 9337.48, "cum_pct": 3.6}, {"sku": "SKU67", "profit": 9288.32, "cum_pct": 5.4}, {"sku": "SKU88", "profit": 9268.84, "cum_pct": 7.2}, {"sku": "SKU51", "profit": 9152.51, "cum_pct": 8.9}, {"sku": "SKU31", "profit": 8982.83, "cum_pct": 10.7}, {"sku": "SKU99", "profit": 8935.06, "cum_pct": 12.4}, {"sku": "SKU52", "profit": 8815.07, "cum_pct": 14.1}, {"sku": "SKU32", "profit": 8774.09, "cum_pct": 15.8}, {"sku": "SKU18", "profit": 8739.75, "cum_pct": 17.5}, {"sku": "SKU23", "profit": 8560.5, "cum_pct": 19.1}, {"sku": "SKU34", "profit": 8539.58, "cum_pct": 20.8}, {"sku": "SKU90", "profit": 8509.2, "cum_pct": 22.4}, {"sku": "SKU0", "profit": 8425.01, "cum_pct": 24.0}, {"sku": "SKU60", "profit": 8342.32, "cum_pct": 25.6}, {"sku": "SKU24", "profit": 8240.23, "cum_pct": 27.2}, {"sku": "SKU66", "profit": 7929.58, "cum_pct": 28.7}, {"sku": "SKU65", "profit": 7790.54, "cum_pct": 30.2}, {"sku": "SKU80", "profit": 7784.1, "cum_pct": 31.7}, {"sku": "SKU85", "profit": 7763.75, "cum_pct": 33.2}, {"sku": "SKU71", "profit": 7735.28, "cum_pct": 34.7}, {"sku": "SKU14", "profit": 7716.5, "cum_pct": 36.2}, {"sku": "SKU6", "profit": 7684.14, "cum_pct": 37.7}, {"sku": "SKU64", "profit": 7674.23, "cum_pct": 39.2}, {"sku": "SKU49", "profit": 7648.07, "cum_pct": 40.6}, {"sku": "SKU98", "profit": 7636.74, "cum_pct": 42.1}, {"sku": "SKU7", "profit": 7592.23, "cum_pct": 43.6}, {"sku": "SKU20", "profit": 7559.59, "cum_pct": 45.0}, {"sku": "SKU29", "profit": 7506.57, "cum_pct": 46.5}, {"sku": "SKU96", "profit": 7486.53, "cum_pct": 47.9}]}
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById('dashboard-data').textContent);
+
+const COLORS = {
+  amber:'#F2A93B', teal:'#35C9C1', red:'#FF6259', blue:'#5B8DEF',
+  purple:'#9D7BFF', muted:'#8B98AC', grid:'#1a2436'
+};
+const PALETTE = [COLORS.blue, COLORS.teal, COLORS.amber, COLORS.purple, COLORS.red];
+
+function fmtMoney(v){
+  if(Math.abs(v) >= 1000) return '$' + (v/1000).toFixed(1) + 'K';
+  return '$' + v.toFixed(0);
+}
+
+// ---------- KPIs & flow strip (set first, independent of chart rendering) ----------
+document.getElementById('kpiRevenue').textContent = fmtMoney(DATA.kpis.total_revenue);
+document.getElementById('kpiProfit').textContent = fmtMoney(DATA.kpis.total_profit);
+document.getElementById('kpiMargin').textContent = DATA.kpis.avg_margin + '% avg margin';
+document.getElementById('kpiDefect').textContent = DATA.kpis.avg_defect_rate + '%';
+document.getElementById('kpiRisk').textContent = DATA.kpis.at_risk_skus + ' / ' + DATA.kpis.total_skus;
+
+document.getElementById('flowMfg').textContent = DATA.kpis.total_skus + ' SKUs';
+document.getElementById('flowShip').textContent = DATA.shipping.length + ' lanes';
+document.getElementById('flowRev').textContent = fmtMoney(DATA.kpis.total_revenue);
+
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = COLORS.muted;
+}
+
+// ---------- Nav ----------
+const navItems = document.querySelectorAll('.navitem');
+navItems.forEach(item=>{
+  item.addEventListener('click', ()=>{
+    navItems.forEach(n=>n.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('sec-'+item.dataset.section).classList.add('active');
+    if(window.innerWidth <= 720){ document.getElementById('sidebar').classList.remove('open'); }
+  });
+});
+document.getElementById('menuToggle').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// ---------- KPIs & flow strip ----------
+// (set earlier, before Chart.js usage, for resilience)
+
+if (typeof Chart !== 'undefined') {
+// ---------- Overview charts ----------
+new Chart(document.getElementById('chartCategory'), {
+  type:'bar',
+  data:{
+    labels: DATA.category.map(c=>c['Product type']),
+    datasets:[
+      {label:'Revenue', data: DATA.category.map(c=>c.revenue), backgroundColor: COLORS.blue, borderRadius:5, yAxisID:'y'},
+      {label:'Margin %', data: DATA.category.map(c=>c.margin), type:'line', borderColor: COLORS.amber, backgroundColor: COLORS.amber, yAxisID:'y1', tension:.3, pointRadius:4}
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      y:{grid:{color:COLORS.grid}, ticks:{callback:v=>fmtMoney(v)}},
+      y1:{position:'right', grid:{display:false}, min:80, max:92, ticks:{callback:v=>v+'%'}},
+      x:{grid:{display:false}}
+    },
+    plugins:{legend:{labels:{boxWidth:10, padding:14}}}
+  }
+});
+
+new Chart(document.getElementById('chartPareto'), {
+  type:'line',
+  data:{
+    labels: DATA.pareto.map(p=>p.sku),
+    datasets:[{
+      label:'Cumulative % of profit', data: DATA.pareto.map(p=>p.cum_pct),
+      borderColor: COLORS.teal, backgroundColor:'rgba(53,201,193,.12)', fill:true, tension:.25, pointRadius:0, borderWidth:2
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{ y:{grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}, ticks:{maxTicksLimit:8}} },
+    plugins:{legend:{display:false}}
+  }
+});
+
+new Chart(document.getElementById('chartLocation'), {
+  type:'bar',
+  data:{
+    labels: DATA.location.map(l=>l.Location),
+    datasets:[{label:'Revenue', data: DATA.location.map(l=>l.revenue), backgroundColor: PALETTE, borderRadius:5}]
+  },
+  options:{
+    indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    scales:{ x:{grid:{color:COLORS.grid}, ticks:{callback:v=>fmtMoney(v)}}, y:{grid:{display:false}} },
+    plugins:{legend:{display:false}}
+  }
+});
+
+new Chart(document.getElementById('chartSupplierMini'), {
+  type:'bar',
+  data:{
+    labels: DATA.supplier.map(s=>s['Supplier name'].replace('Supplier ','S')),
+    datasets:[
+      {label:'Defect %', data: DATA.supplier.map(s=>s.defect), backgroundColor: COLORS.red, borderRadius:5},
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{ y:{grid:{color:COLORS.grid}}, x:{grid:{display:false}} },
+    plugins:{legend:{display:false}}
+  }
+});
+
+// ---------- Products ----------
+new Chart(document.getElementById('chartProdRevProfit'), {
+  type:'bar',
+  data:{
+    labels: DATA.category.map(c=>c['Product type']),
+    datasets:[
+      {label:'Revenue', data: DATA.category.map(c=>c.revenue), backgroundColor: COLORS.blue, borderRadius:5},
+      {label:'Profit', data: DATA.category.map(c=>c.profit), backgroundColor: COLORS.teal, borderRadius:5}
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{ y:{grid:{color:COLORS.grid}, ticks:{callback:v=>fmtMoney(v)}}, x:{grid:{display:false}} },
+    plugins:{legend:{labels:{boxWidth:10}}}
+  }
+});
+
+const tblTopProfitBody = document.querySelector('#tblTopProfit tbody');
+DATA.top_profit.forEach(r=>{
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="mono">${r.SKU}</td><td>${r['Product type']}</td><td>${r['Supplier name']}</td><td class="mono">$${r.Profit.toLocaleString(undefined,{maximumFractionDigits:0})}</td>`;
+  tblTopProfitBody.appendChild(tr);
+});
+
+// ---------- Suppliers ----------
+function riskLevel(s){
+  const hi = s.defect > 2.3 && s.lead > 17;
+  const mid = s.defect > 2.3 || s.lead > 17;
+  return hi ? 'High' : (mid ? 'Medium' : 'Low');
+}
+DATA.supplier.forEach(s=> s.risk = riskLevel(s));
+
+let supplierFilter = null;
+const filterRow = document.getElementById('supplierFilters');
+const allChip = document.createElement('div');
+allChip.className = 'fchip active';
+allChip.textContent = 'All suppliers';
+allChip.onclick = ()=>{ supplierFilter=null; setActiveChip(allChip); renderSupplierTable(); };
+filterRow.appendChild(allChip);
+function setActiveChip(el){
+  filterRow.querySelectorAll('.fchip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+}
+DATA.supplier.forEach(s=>{
+  const chip = document.createElement('div');
+  chip.className = 'fchip';
+  chip.textContent = s['Supplier name'];
+  chip.onclick = ()=>{ supplierFilter = s['Supplier name']; setActiveChip(chip); renderSupplierTable(); };
+  filterRow.appendChild(chip);
+});
+
+function riskPillClass(r){ return r==='High' ? 'risk-hi' : (r==='Medium' ? 'risk-mid' : 'risk-lo'); }
+
+let supplierSortKey = 'revenue', supplierSortDir = -1;
+function renderSupplierTable(){
+  const tbody = document.querySelector('#tblSuppliers tbody');
+  tbody.innerHTML = '';
+  let rows = DATA.supplier.filter(s=> !supplierFilter || s['Supplier name']===supplierFilter);
+  rows = [...rows].sort((a,b)=> (a[supplierSortKey] > b[supplierSortKey] ? 1 : -1) * supplierSortDir);
+  rows.forEach(s=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${s['Supplier name']}</td><td class="mono">${s.skus}</td><td class="mono">$${s.revenue.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+      <td class="mono">${s.defect}%</td><td class="mono">${s.lead}</td><td class="mono">${s.fail_rate}%</td>
+      <td><span class="pill ${riskPillClass(s.risk)}">${s.risk}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+renderSupplierTable();
+document.querySelectorAll('#tblSuppliers th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    supplierSortDir = (supplierSortKey === key) ? -supplierSortDir : -1;
+    supplierSortKey = key;
+    renderSupplierTable();
+  });
+});
+
+new Chart(document.getElementById('chartSupplierScatter'), {
+  type:'bubble',
+  data:{
+    datasets: DATA.supplier.map((s,i)=>({
+      label: s['Supplier name'],
+      data: [{x: s.lead, y: s.defect, r: Math.sqrt(s.revenue)/45}],
+      backgroundColor: PALETTE[i % PALETTE.length] + 'CC'
+    }))
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      x:{title:{display:true,text:'Avg Lead Time (days)'}, grid:{color:COLORS.grid}},
+      y:{title:{display:true,text:'Avg Defect Rate (%)'}, grid:{color:COLORS.grid}}
+    },
+    plugins:{legend:{position:'bottom', labels:{boxWidth:10, padding:10}}}
+  }
+});
+
+new Chart(document.getElementById('chartInspection'), {
+  type:'bar',
+  data:{
+    labels: DATA.inspection.map(i=>i['Supplier name'].replace('Supplier ','S')),
+    datasets:[
+      {label:'Pass', data: DATA.inspection.map(i=>i.Pass), backgroundColor: COLORS.teal, stack:'s'},
+      {label:'Pending', data: DATA.inspection.map(i=>i.Pending), backgroundColor: COLORS.amber, stack:'s'},
+      {label:'Fail', data: DATA.inspection.map(i=>i.Fail), backgroundColor: COLORS.red, stack:'s'}
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'}} },
+    plugins:{legend:{labels:{boxWidth:10}}}
+  }
+});
+
+// ---------- Logistics ----------
+new Chart(document.getElementById('chartShipping'), {
+  type:'bubble',
+  data:{
+    datasets:[...new Set(DATA.shipping.map(s=>s['Shipping carriers']))].map((carrier,i)=>({
+      label: carrier,
+      data: DATA.shipping.filter(s=>s['Shipping carriers']===carrier).map(s=>({x:s.time, y:s.cost, r: s.n/1.5, mode:s['Transportation modes']})),
+      backgroundColor: PALETTE[i % PALETTE.length] + 'CC'
+    }))
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      x:{title:{display:true,text:'Avg Shipping Time (days)'}, grid:{color:COLORS.grid}},
+      y:{title:{display:true,text:'Avg Shipping Cost ($)'}, grid:{color:COLORS.grid}}
+    },
+    plugins:{
+      legend:{position:'bottom', labels:{boxWidth:10}},
+      tooltip:{callbacks:{label: ctx => `${ctx.dataset.label} · ${ctx.raw.mode}: $${ctx.raw.y} / ${ctx.raw.x}d`}}
+    }
+  }
+});
+
+new Chart(document.getElementById('chartRoutes'), {
+  type:'bar',
+  data:{
+    labels: DATA.routes.map(r=>r.Routes),
+    datasets:[
+      {label:'Avg Cost ($)', data: DATA.routes.map(r=>r.cost), backgroundColor: COLORS.blue, borderRadius:5, yAxisID:'y'},
+      {label:'Avg Time (days)', data: DATA.routes.map(r=>r.time), backgroundColor: COLORS.amber, borderRadius:5, yAxisID:'y1'}
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      y:{grid:{color:COLORS.grid}, title:{display:true, text:'$'}},
+      y1:{position:'right', grid:{display:false}, title:{display:true, text:'days'}},
+      x:{grid:{display:false}}
+    },
+    plugins:{legend:{labels:{boxWidth:10}}}
+  }
+});
+
+} // end Chart guard
+
+// ---------- Risk table ----------
+function riskStatus(d){
+  if(d < 1) return {label:'Critical', cls:'risk-hi'};
+  if(d < 3) return {label:'High', cls:'risk-mid'};
+  return {label:'Watch', cls:'risk-lo'};
+}
+let riskSortKey = 'Days of stock cover', riskSortDir = 1;
+function renderRiskTable(filterText){
+  const tbody = document.querySelector('#tblRisk tbody');
+  tbody.innerHTML = '';
+  let rows = DATA.risk;
+  if(filterText){
+    const f = filterText.toLowerCase();
+    rows = rows.filter(r => r.SKU.toLowerCase().includes(f) || r['Product type'].toLowerCase().includes(f) || r['Supplier name'].toLowerCase().includes(f));
+  }
+  rows = [...rows].sort((a,b)=> (a[riskSortKey] > b[riskSortKey] ? 1 : -1) * riskSortDir);
+  rows.forEach(r=>{
+    const st = riskStatus(r['Days of stock cover']);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="mono">${r.SKU}</td><td>${r['Product type']}</td><td>${r['Supplier name']}</td>
+      <td class="mono">${r['Stock levels']}</td><td class="mono">${r['Days of stock cover']}</td><td class="mono">${r['Lead time']}</td>
+      <td><span class="pill ${st.cls}">${st.label}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+renderRiskTable('');
+document.getElementById('riskSearch').addEventListener('input', e=> renderRiskTable(e.target.value));
+document.querySelectorAll('#tblRisk th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    riskSortDir = (riskSortKey === key) ? -riskSortDir : 1;
+    riskSortKey = key;
+    renderRiskTable(document.getElementById('riskSearch').value);
+  });
+});
+
+// ---------- Insights ----------
+const insights = [
+  {title:'Fix reorder points for 92 at-risk SKUs', text:'Most of the catalog carries less stock cover than its own supplier lead time. Recalculate reorder points as daily sell-through × lead time × safety buffer, starting with the Critical-status SKUs in the Risk tab.'},
+  {title:'Address Supplier 4 QC failures and Supplier 3 lead times', text:'Supplier 4 fails inspection on 67% of SKUs despite a mid-pack defect rate. Supplier 3 has the slowest average lead time (20.1 days). Different problems, different fixes.'},
+  {title:'Re-route shipments off Carrier C + Road', text:'This combination costs 69% more per shipment than the cheapest option (Carrier A + Sea) without a transit-time advantage. Reassign non-urgent shipments.'},
+  {title:'Prioritize the top 20 profit SKUs', text:'These SKUs (20% of the catalog) generate roughly a third of total profit. Give them priority in stock allocation and supplier monitoring.'},
+  {title:'Consider expanding the Cosmetics line', text:'Cosmetics has the best average margin (87.3%) with the fewest SKUs (26). A measured expansion could grow profit efficiently — validate margin holds at higher volume before scaling.'}
+];
+const insightList = document.getElementById('insightList');
+insights.forEach((ins,i)=>{
+  const div = document.createElement('div');
+  div.className = 'insight';
+  div.innerHTML = `<div class="inum">${i+1}</div><div><div class="ititle">${ins.title}</div><div class="itext">${ins.text}</div></div>`;
+  insightList.appendChild(div);
+});
+</script>
+</body>
+</html>
